@@ -29,16 +29,16 @@ def summary_data(stim, data):
     plt.show()
 
 
-def prep_variables(stim, data, window=10, dilation=1, downsample=3, show_sample=False):
+def prep_variables(stim, data, window=10, downsample=3, show_sample=False):
     U = [torch.from_numpy(u)[:, :-5] for u in stim]
     U = [nn.functional.avg_pool1d(u.unsqueeze(0), downsample).squeeze(0) for u in U]
-    U = [nn.functional.pad(u, (0, 0, (window-1)*dilation, 0)).T.unsqueeze(0).unsqueeze(-1) for u in U]
-    U = [nn.functional.unfold(u, (window, 1), dilation).squeeze(0).squeeze(-1).T for u in U]
+    U = [nn.functional.pad(u, (0, 0, window-1, 0)).T.unsqueeze(0).unsqueeze(-1) for u in U]
+    U = [nn.functional.unfold(u, (window, 1)).squeeze(0).squeeze(-1).T for u in U]
 
     Z = [torch.from_numpy(z.mean(-1)) for z in data]
 
     if show_sample:
-        fbins = U[0].shape[-1]//window, window
+        fbins = U[0].shape[-1]//window
         print(f"Sample windowed input ({window} time steps * {fbins} frequency bins):")
         plt.figure(figsize=(2, 2))
         plt.imshow(U[0][106, :].reshape(fbins, window), aspect=1, origin='ll')
@@ -54,7 +54,7 @@ def filter_electrodes(Z, locz):
 
     Z = [torch.cat((z[:, ind_hg], z[:, ind_pt], z[:, ind_stg]), 1) for z in Z]
     print(f"electrodes: {Z[0].shape[-1]} (HG: {ind_hg.sum()}, "
-          + "PT: {ind_pt.sum()}, STG: {ind_stg.sum()})")
+          + f"PT: {ind_pt.sum()}, STG: {ind_stg.sum()})")
 
     ind_hg = torch.arange(ind_hg.sum(), dtype=torch.long)
     ind_pt = torch.arange(ind_pt.sum(), dtype=torch.long) + ind_hg.max() + 1
@@ -76,7 +76,7 @@ def summary_prior():
 
     plt.subplot(132)
     D = dist.Normal(0.0, 0.1)  # G
-    plt.hist([D.sample() for _ in range(50_000)], range=(-0.75, 0.75), bins=200, density=True, alpha=0.7)
+    plt.hist([D.sample() for _ in range(50_000)], range=(-0.75, 0.75), bins=200, density=True)
     plt.legend(['G'])
     plt.xlim(-0.75, 0.75)
 
